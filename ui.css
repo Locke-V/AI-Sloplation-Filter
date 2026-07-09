@@ -1,0 +1,170 @@
+:root {
+  color-scheme: dark;
+  --bg: #474d5d;
+  --panel: #596276;
+  --panel-soft: #677187;
+  --text: #f6f9fa;
+  --muted: #d2dae2;
+  --line: #7d89a0;
+  --accent: #71bdb9;
+  --accent-strong: #91d3d0;
+  --accent-text: #172427;
+  --danger: #ff9777;
+  --focus: #b7efed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 Arial, sans-serif;
+}
+
+main {
+  width: 340px;
+  padding: 16px;
+}
+
+main.options {
+  width: min(760px, 100vw);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 28px 20px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.brand-mascot {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+h1 {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+  color: var(--muted);
+}
+
+section,
+fieldset,
+.switch-row {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+fieldset {
+  display: grid;
+  gap: 8px;
+}
+
+legend,
+label {
+  font-weight: 700;
+}
+
+fieldset label,
+.file-button {
+  font-weight: 400;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 92px;
+  margin-top: 8px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  color: var(--text);
+  background: var(--panel-soft);
+  font: 13px/1.4 Consolas, "Courier New", monospace;
+}
+
+textarea::placeholder {
+  color: var(--muted);
+}
+
+textarea:focus,
+button:focus,
+input:focus,
+.file-button:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+button,
+.file-button {
+  min-height: 34px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 8px 12px;
+  font: 700 13px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+button:hover,
+.file-button:hover {
+  background: var(--accent-strong);
+}
+
+button.secondary,
+.file-button {
+  background: var(--panel-soft);
+  color: var(--accent);
+}
+
+button.secondary:hover,
+.file-button:hover {
+  background: #727d94;
+  color: var(--text);
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#status {
+  min-height: 18px;
+}

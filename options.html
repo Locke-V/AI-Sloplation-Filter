@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Sloplation Filter Options</title>
+    <link rel="stylesheet" href="ui.css">
+  </head>
+  <body>
+    <main class="options">
+      <header>
+        <img class="brand-mascot" src="assets/mascot.png" alt="">
+        <div>
+          <h1>AI Sloplation Filter</h1>
+          <p>Everything stays in this browser unless you export it.</p>
+        </div>
+      </header>
+
+      <label class="switch-row">
+        <span>Enabled</span>
+        <input id="enabled" type="checkbox">
+      </label>
+
+      <label class="switch-row">
+        <span>Show filtered count</span>
+        <input id="showToast" type="checkbox">
+      </label>
+
+      <fieldset>
+        <legend>Filter style</legend>
+        <label>
+          <input type="radio" name="mode" value="hide">
+          Hide matching items
+        </label>
+        <label>
+          <input type="radio" name="mode" value="dim">
+          Dim and label matching items
+        </label>
+      </fieldset>
+
+      <section>
+        <label for="blockedInput">Blocked uploaders, one per line</label>
+        <textarea id="blockedInput" spellcheck="false"></textarea>
+      </section>
+
+      <section>
+        <label for="allowedInput">Always allow, one per line</label>
+        <textarea id="allowedInput" spellcheck="false"></textarea>
+      </section>
+
+      <div class="button-row">
+        <button id="saveButton" type="button">Save</button>
+        <button id="resetButton" class="secondary" type="button">Reset</button>
+        <button id="exportButton" class="secondary" type="button">Export</button>
+        <label class="file-button">
+          Import
+          <input id="importInput" type="file" accept="application/json,.json">
+        </label>
+      </div>
+
+      <p id="status" role="status"></p>
+    </main>
+    <script src="settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

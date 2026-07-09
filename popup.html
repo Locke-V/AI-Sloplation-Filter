@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Sloplation Filter</title>
+    <link rel="stylesheet" href="ui.css">
+  </head>
+  <body class="popup">
+    <main>
+      <header>
+        <img class="brand-mascot" src="assets/mascot.png" alt="">
+        <div>
+          <h1>Sloplation Filter</h1>
+          <p id="status">Local filtering is on.</p>
+        </div>
+      </header>
+
+      <label class="switch-row">
+        <span>Enabled</span>
+        <input id="enabled" type="checkbox">
+      </label>
+
+      <fieldset>
+        <legend>Filter style</legend>
+        <label>
+          <input type="radio" name="mode" value="hide">
+          Hide
+        </label>
+        <label>
+          <input type="radio" name="mode" value="dim">
+          Dim
+        </label>
+      </fieldset>
+
+      <section>
+        <label for="blockedInput">Blocked uploaders</label>
+        <textarea id="blockedInput" spellcheck="false"></textarea>
+      </section>
+
+      <section>
+        <label for="allowedInput">Always allow</label>
+        <textarea id="allowedInput" spellcheck="false"></textarea>
+      </section>
+
+      <div class="button-row">
+        <button id="saveButton" type="button">Save</button>
+        <button id="optionsButton" type="button">More</button>
+      </div>
+    </main>
+    <script src="settings.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+.mgaif-hidden {
+  display: none !important;
+}
+
+.mgaif-dimmed {
+  opacity: 0.28 !important;
+  filter: grayscale(0.85) !important;
+}
+
+.mgaif-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border: 1px solid #b3261e;
+  border-radius: 999px;
+  background: #fff0ef;
+  color: #b3261e;
+  font: 600 11px/1.2 Arial, sans-serif;
+  vertical-align: middle;
+}
+
+.mgaif-count-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border: 1px solid #71bdb9;
+  border-radius: 999px;
+  background: #eefafa;
+  color: #1f5558;
+  font: 700 12px/1.2 Arial, sans-serif;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.mgaif-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #d8d2ca;
+  border-radius: 8px;
+  background: #fffaf4;
+  color: #2b2118;
+  box-shadow: 0 8px 24px rgba(30, 25, 20, 0.18);
+  font: 13px/1.35 Arial, sans-serif;
+}
