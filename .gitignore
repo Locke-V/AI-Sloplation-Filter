@@ -1,0 +1,33 @@
+# Packaged extension uploads
+*.zip
+*.crx
+*.xpi
+
+# Local build/package output
+dist/
+build/
+web-ext-artifacts/
+chrome-build/
+firefox-build/
+package/
+packages/
+tmp/
+temp/
+DELETE-OLD-*
+
+# Dependency/cache folders if tooling is added later
+node_modules/
+.cache/
+.parcel-cache/
+
+# Logs and local environment files
+*.log
+.env
+.env.*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

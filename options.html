@@ -21,11 +21,6 @@
         <input id="enabled" type="checkbox">
       </label>
 
-      <label class="switch-row">
-        <span>Show filtered count</span>
-        <input id="showToast" type="checkbox">
-      </label>
-
       <fieldset>
         <legend>Filter style</legend>
         <label>
@@ -37,6 +32,11 @@
           Dim and label matching items
         </label>
       </fieldset>
+
+      <label class="switch-row">
+        <span>Put unfiltered chapters first</span>
+        <input id="sortCleanFirst" type="checkbox">
+      </label>
 
       <section>
         <label for="blockedInput">Blocked uploaders, one per line</label>
@@ -59,6 +59,7 @@
       </div>
 
       <p id="status" role="status"></p>
+      <p class="build-id">Build 1.0.1</p>
     </main>
     <script src="settings.js"></script>
     <script src="options.js"></script>

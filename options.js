@@ -1,9 +1,9 @@
 "use strict";
 
 const enabled = document.querySelector("#enabled");
-const showToast = document.querySelector("#showToast");
 const blockedInput = document.querySelector("#blockedInput");
 const allowedInput = document.querySelector("#allowedInput");
+const sortCleanFirst = document.querySelector("#sortCleanFirst");
 const saveButton = document.querySelector("#saveButton");
 const resetButton = document.querySelector("#resetButton");
 const exportButton = document.querySelector("#exportButton");
@@ -26,7 +26,7 @@ function setSelectedMode(mode) {
 function render(settings) {
   currentSettings = settings;
   enabled.checked = settings.enabled;
-  showToast.checked = settings.showToast;
+  sortCleanFirst.checked = settings.sortCleanFirst;
   setSelectedMode(settings.mode);
   blockedInput.value = settings.blockedGroups.join("\n");
   allowedInput.value = settings.allowedGroups.join("\n");
@@ -36,8 +36,9 @@ function collect() {
   return mgaifMergeSettings({
     ...currentSettings,
     enabled: enabled.checked,
-    showToast: showToast.checked,
+    showToast: false,
     mode: getSelectedMode(),
+    sortCleanFirst: sortCleanFirst.checked,
     blockedGroups: mgaifCleanList(blockedInput.value),
     allowedGroups: mgaifCleanList(allowedInput.value)
   });

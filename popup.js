@@ -3,6 +3,7 @@
 const enabled = document.querySelector("#enabled");
 const blockedInput = document.querySelector("#blockedInput");
 const allowedInput = document.querySelector("#allowedInput");
+const sortCleanFirst = document.querySelector("#sortCleanFirst");
 const saveButton = document.querySelector("#saveButton");
 const optionsButton = document.querySelector("#optionsButton");
 const status = document.querySelector("#status");
@@ -23,6 +24,7 @@ function setSelectedMode(mode) {
 function render(settings) {
   currentSettings = settings;
   enabled.checked = settings.enabled;
+  sortCleanFirst.checked = settings.sortCleanFirst;
   setSelectedMode(settings.mode);
   blockedInput.value = settings.blockedGroups.join("\n");
   allowedInput.value = settings.allowedGroups.join("\n");
@@ -33,6 +35,7 @@ function collect() {
     ...currentSettings,
     enabled: enabled.checked,
     mode: getSelectedMode(),
+    sortCleanFirst: sortCleanFirst.checked,
     blockedGroups: mgaifCleanList(blockedInput.value),
     allowedGroups: mgaifCleanList(allowedInput.value)
   });
@@ -55,13 +58,14 @@ async function save() {
 
 saveButton.addEventListener("click", save);
 enabled.addEventListener("change", save);
+sortCleanFirst.addEventListener("change", save);
 
 for (const input of document.querySelectorAll("input[name='mode']")) {
   input.addEventListener("change", save);
 }
 
 optionsButton.addEventListener("click", () => {
-  chrome.runtime.openOptionsPage();
+  MGAIF_API.runtime.openOptionsPage();
 });
 
 mgaifLoadSettings().then((settings) => {

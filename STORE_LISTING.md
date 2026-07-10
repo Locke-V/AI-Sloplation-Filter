@@ -1,4 +1,4 @@
-﻿# Chrome Web Store Listing Copy
+# Chrome Web Store Listing Copy
 
 ## Name
 
@@ -12,12 +12,12 @@ Filter AI slop scanlation uploads on Mangago.
 
 AI Sloplation Filter helps manga and manhwa readers keep noisy upload groups out of sight on Mangago.
 
-Use a local blocklist to hide or dim chapter rows, update items, and visible in-site notification entries from uploaders you do not want to see. The starter list includes Desire Scans, Myth Toons, Kaizen, Spring, Springtoons, and Desire, with OccultScans included as an always-allowed group.
+Use a local blocklist to hide or dim chapter rows, update items, and visible in-site notification entries from uploaders you do not want to see. The starter blocklist includes Desire Scans, Myth Toons, Kaizen, Spring, Springtoons, and Desire. The always-allow list starts blank.
 
 Features:
 
 - Hide matching uploader groups
-- Dim and label matches instead of hiding them
+- Dim and label matches instead of hiding them`r`n- Optionally move unfiltered chapters above dimmed filtered rows
 - Edit blocked and allowed uploaders from the popup
 - Import and export your settings as plain JSON
 - Runs only on Mangago pages
@@ -71,7 +71,9 @@ No login, credentials, paid account, or external service is required for testing
 ## Listing Assets
 
 - Store icon: `assets/icon-128.png`
-- Screenshot: `assets/screenshot-1280x800.png`
+- Screenshot: `assets/screenshot-hidden-1280x800.png`
+- Screenshot: `assets/screenshot-dimmed-1280x800.png`
 - Small promo tile: `assets/promo-small-440x280.png`
 - Marquee promo tile: `assets/promo-marquee-1400x560.png`
+
 

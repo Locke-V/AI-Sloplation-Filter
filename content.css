@@ -1,3 +1,23 @@
+:root[data-mgaif-mode="hide"] [data-mgaif-filtered] {
+  display: none !important;
+}
+
+:root[data-mgaif-mode="hide"] tr[data-mgaif-filtered] {
+  display: table-row !important;
+  visibility: collapse !important;
+}
+
+:root[data-mgaif-mode="dim"] [data-mgaif-filtered] {
+  opacity: 0.28 !important;
+  filter: grayscale(0.85) !important;
+}
+
+:root[data-mgaif-mode="dim"] [data-mgaif-chapter-list] {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 .mgaif-hidden {
   display: none !important;
 }
@@ -32,19 +52,4 @@
   font: 700 12px/1.2 Arial, sans-serif;
   vertical-align: middle;
   white-space: nowrap;
-}
-
-.mgaif-toast {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 2147483647;
-  max-width: min(360px, calc(100vw - 32px));
-  padding: 10px 12px;
-  border: 1px solid #d8d2ca;
-  border-radius: 8px;
-  background: #fffaf4;
-  color: #2b2118;
-  box-shadow: 0 8px 24px rgba(30, 25, 20, 0.18);
-  font: 13px/1.35 Arial, sans-serif;
 }

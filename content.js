@@ -1,61 +1,30 @@
-﻿(() => {
+(() => {
+  const extensionApi = globalThis.browser || globalThis.chrome;
   "use strict";
 
   const DEFAULT_SETTINGS = Object.freeze({
     enabled: true,
     mode: "hide",
-    showToast: true,
+    showToast: false,
+    sortCleanFirst: true,
     blockedGroups: ["Desire Scans", "Myth Toons", "Kaizen", "Spring", "Springtoons", "Desire"],
-    allowedGroups: ["OccultScans"]
+    allowedGroups: []
   });
 
   const STORAGE_KEY = "mgaifSettings";
   const FILTERED_ATTR = "data-mgaif-filtered";
+  const FILTERED_CHAPTER_ATTR = "data-mgaif-filtered-chapter";
+  const CHAPTER_LIST_ATTR = "data-mgaif-chapter-list";
+  const ORIGINAL_ORDER_ATTR = "data-mgaif-original-order";
+  const MODE_ATTR = "data-mgaif-mode";
   const BADGE_CLASS = "mgaif-badge";
   const COUNT_BADGE_CLASS = "mgaif-count-badge";
-  const HIDDEN_CLASS = "mgaif-hidden";
-  const DIMMED_CLASS = "mgaif-dimmed";
-
-  const ITEM_SELECTORS = [
-    "tr",
-    "li",
-    ".chapter",
-    ".chapter-list",
-    ".chapter-list-item",
-    ".episode",
-    ".update",
-    ".update-item",
-    ".notification",
-    ".notification-item",
-    ".notice",
-    ".notice-item",
-    ".feed-item",
-    ".list-item",
-    ".row",
-    ".item",
-    "[class*='chapter']",
-    "[class*='update']",
-    "[class*='notice']",
-    "[class*='notification']"
-  ].join(",");
-
-  const TEXT_SELECTORS = [
-    "a",
-    "td",
-    "span",
-    "p",
-    "div",
-    "em",
-    "strong",
-    "b",
-    "i"
-  ].join(",");
 
   let settings = { ...DEFAULT_SETTINGS };
   let observer = null;
-  let toastTimer = null;
-  let lastHiddenCount = 0;
   let observerStarted = false;
+  let originalOrderCounter = 0;
+  let lastFilteredCount = 0;
 
   function normalize(value) {
     return String(value || "")
@@ -64,16 +33,6 @@
       .replace(/[^a-z0-9]+/g, " ")
       .trim()
       .replace(/\s+/g, " ");
-  }
-
-  function mergeSettings(saved) {
-    const source = saved && typeof saved === "object" ? saved : {};
-    return {
-      ...DEFAULT_SETTINGS,
-      ...source,
-      blockedGroups: cleanList(source.blockedGroups || DEFAULT_SETTINGS.blockedGroups),
-      allowedGroups: cleanList(source.allowedGroups || DEFAULT_SETTINGS.allowedGroups)
-    };
   }
 
   function cleanList(list) {
@@ -86,6 +45,30 @@
     );
   }
 
+  function removeOldDefaultAllowList(list) {
+    const cleaned = cleanList(list);
+    if (cleaned.length === 1 && normalize(cleaned[0]) === "occultscans") {
+      return [];
+    }
+
+    return cleaned;
+  }
+
+  function mergeSettings(saved) {
+    const source = saved && typeof saved === "object" ? saved : {};
+    const hasAllowedGroups = Object.prototype.hasOwnProperty.call(source, "allowedGroups");
+    const blockedGroups = cleanList(source.blockedGroups);
+
+    return {
+      ...DEFAULT_SETTINGS,
+      ...source,
+      showToast: false,
+      sortCleanFirst: source.sortCleanFirst !== false,
+      blockedGroups: blockedGroups.length ? blockedGroups : DEFAULT_SETTINGS.blockedGroups,
+      allowedGroups: removeOldDefaultAllowList(hasAllowedGroups ? source.allowedGroups : DEFAULT_SETTINGS.allowedGroups)
+    };
+  }
+
   function getText(element) {
     return element ? element.textContent || "" : "";
   }
@@ -96,6 +79,14 @@
       /(^|\s)(promo|notice)\./i.test(trimmed);
   }
 
+  function isUploaderHref(href) {
+    return /\/home\/people\/\d+\/upload\/?/i.test(String(href || ""));
+  }
+
+  function isChapterHref(href) {
+    return /\/read-manga\/[^/]+\/.*(?:br_chapter-|iur_chapter-|chapter-).*\/pg-\d+\/?/i.test(String(href || ""));
+  }
+
   function matchesAny(text, list) {
     const normalizedText = normalize(text);
     return list.find((name) => {
@@ -104,141 +95,151 @@
     });
   }
 
-  function isAllowed(text) {
-    return Boolean(matchesAny(text, settings.allowedGroups));
-  }
-
   function findBlockedGroup(text) {
-    if (isAllowed(text)) {
+    if (!text || matchesAny(text, settings.allowedGroups)) {
       return "";
     }
 
     return matchesAny(text, settings.blockedGroups) || "";
   }
 
-  function hasPageSignals(element) {
-    const text = normalize(getText(element));
-    const link = element.matches("a") ? element : element.querySelector("a[href]");
-    const href = link ? String(link.getAttribute("href") || "") : "";
-
-    return (
-      text.includes("chapter") ||
-      text.includes("chap") ||
-      text.includes("update") ||
-      text.includes("upload") ||
-      text.includes("scan") ||
-      text.includes("toon") ||
-      text.includes("notification") ||
-      /read-manga|chapter|manga|notice|notification/i.test(href)
-    );
-  }
-
-  function findBestContainer(node) {
-    const base = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-    if (!base || !document.body.contains(base)) {
-      return null;
+  function closestUsefulContainer(link) {
+    const tableRow = link.closest("tr");
+    if (tableRow) {
+      return tableRow;
     }
 
-    const row = base.closest(ITEM_SELECTORS);
-    if (row && row !== document.body && row !== document.documentElement && hasPageSignals(row)) {
-      return row;
+    const listRow = link.closest("li");
+    if (listRow) {
+      return listRow;
     }
 
-    return null;
+    let current = link.parentElement;
+    let fallback = link;
+
+    while (current && current !== document.body && current !== document.documentElement) {
+      const chapterLinks = Array.from(current.querySelectorAll("a[href]")).filter((item) => {
+        return isChapterHref(item.getAttribute("href"));
+      });
+      const uploaderLinks = Array.from(current.querySelectorAll("a[href]")).filter((item) => {
+        return isUploaderHref(item.getAttribute("href"));
+      });
+
+      if (chapterLinks.length <= 1 && uploaderLinks.length <= 1) {
+        fallback = current;
+        current = current.parentElement;
+        continue;
+      }
+
+      break;
+    }
+
+    return fallback;
   }
 
-  function getCandidateElements() {
-    const direct = Array.from(document.querySelectorAll(ITEM_SELECTORS));
-    const textMatches = [];
+  function uniqueElements(elements) {
+    return Array.from(new Set(elements.filter(Boolean)));
+  }
 
-    for (const element of document.querySelectorAll(TEXT_SELECTORS)) {
-      const text = getText(element);
-      if (findBlockedGroup(text)) {
-        const container = findBestContainer(element);
-        if (container) {
-          textMatches.push(container);
+  function buildChapterItems() {
+    const anchors = Array.from(document.querySelectorAll("a[href]"));
+    const items = [];
+    let currentItem = null;
+
+    for (const anchor of anchors) {
+      const href = anchor.getAttribute("href");
+
+      if (isChapterHref(href)) {
+        const chapterContainer = closestUsefulContainer(anchor);
+        const labelText = `${getText(anchor)} ${getText(chapterContainer)}`;
+        if (!isChapterEntryText(labelText)) {
+          currentItem = null;
+          continue;
         }
+
+        currentItem = {
+          chapterLink: anchor,
+          chapterContainer,
+          uploaderLink: null,
+          uploaderContainer: null
+        };
+        items.push(currentItem);
+        continue;
+      }
+
+      if (isUploaderHref(href) && currentItem && !currentItem.uploaderLink) {
+        currentItem.uploaderLink = anchor;
+        currentItem.uploaderContainer = closestUsefulContainer(anchor);
       }
     }
 
-    const candidates = Array.from(new Set([...direct, ...textMatches])).filter((element) => {
-      if (!element || element === document.body || element === document.documentElement) {
-        return false;
-      }
-
-      const text = getText(element);
-      return text && findBlockedGroup(text) && hasPageSignals(element);
-    });
-
-    return candidates.filter((element) => {
-      return !candidates.some((other) => other !== element && element.contains(other));
-    });
+    return items;
   }
 
-  function getChapterEntries() {
-    const candidates = Array.from(document.querySelectorAll(ITEM_SELECTORS)).filter((element) => {
-      if (!element || element === document.body || element === document.documentElement) {
-        return false;
-      }
-
-      return isChapterEntryText(getText(element));
-    });
-
-    return candidates.filter((element) => {
-      return !candidates.some((other) => other !== element && element.contains(other));
-    });
+  function getItemElements(item) {
+    return uniqueElements([item.chapterContainer, item.uploaderContainer]);
   }
 
-  function findChapterCountTarget() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode();
-
-    while (node) {
-      if (/Chapters\s*\(\s*\d+\s*\)/i.test(node.nodeValue || "")) {
-        return node.parentElement;
-      }
-
-      node = walker.nextNode();
+  function getItemUploaderText(item) {
+    if (item.uploaderLink) {
+      return getText(item.uploaderLink).trim();
     }
 
-    return null;
+    return getItemElements(item).map(getText).join(" ");
   }
 
-  function getTotalChapterCount(target) {
-    const match = getText(target).match(/Chapters\s*\(\s*(\d+)\s*\)/i);
+  function findChapterCountNode() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (/Chapters\s*\(\s*\d+\s*\)/i.test(node.nodeValue || "")) {
+          return NodeFilter.FILTER_ACCEPT;
+        }
+
+        return NodeFilter.FILTER_SKIP;
+      }
+    });
+
+    return walker.nextNode();
+  }
+
+  function getTotalChapterCountFromNode(node) {
+    const match = String(node ? node.nodeValue : "").match(/Chapters\s*\(\s*(\d+)\s*\)/i);
     return match ? Number.parseInt(match[1], 10) : 0;
   }
-
-  function updateChapterCountSummary() {
-    for (const badge of document.querySelectorAll(`.${COUNT_BADGE_CLASS}`)) {
-      badge.remove();
-    }
-
-    const target = findChapterCountTarget();
-    if (!target) {
-      return;
-    }
-
-    const total = getTotalChapterCount(target);
-    if (!Number.isFinite(total) || total <= 0) {
-      return;
-    }
-
-    const entries = getChapterEntries();
-    const filteredEntries = entries.filter((element) => element.hasAttribute(FILTERED_ATTR)).length;
-    const visibleCount = Math.max(0, total - filteredEntries);
-
-    const badge = document.createElement("span");
-    badge.className = COUNT_BADGE_CLASS;
-    badge.textContent = `${visibleCount} unfiltered`;
-    badge.title = `${visibleCount} of ${total} chapter entries are not hidden by AI Sloplation Filter.`;
-    target.appendChild(badge);
+  function isVisibleTableRow(row) {
+    return window.getComputedStyle(row).display !== "none";
   }
 
-  function clearMarks() {
-    for (const element of document.querySelectorAll(`[${FILTERED_ATTR}]`)) {
-      element.classList.remove(HIDDEN_CLASS, DIMMED_CLASS);
+  function getVisibleChapterTableRowCount() {
+    const rows = Array.from(document.querySelectorAll("#chapter_table tr"));
+    if (!rows.length) {
+      return 0;
+    }
+
+    return rows.filter(isVisibleTableRow).length;
+  }
+
+  function markChapterTableWrapper() {
+    const table = document.querySelector("#chapter_table");
+    if (table && table.parentElement) {
+      table.parentElement.setAttribute(CHAPTER_LIST_ATTR, "true");
+    }
+  }
+
+  function updatePageMode() {
+    if (!settings.enabled) {
+      document.documentElement.removeAttribute(MODE_ATTR);
+      return;
+    }
+
+    document.documentElement.setAttribute(MODE_ATTR, settings.mode === "dim" ? "dim" : "hide");
+  }
+
+  function clearFilteredState() {
+    for (const element of document.querySelectorAll(`[${FILTERED_ATTR}], [${FILTERED_CHAPTER_ATTR}], .mgaif-hidden, .mgaif-dimmed`)) {
       element.removeAttribute(FILTERED_ATTR);
+      element.removeAttribute(FILTERED_CHAPTER_ATTR);
+      element.classList.remove("mgaif-hidden", "mgaif-dimmed");
       element.removeAttribute("title");
     }
 
@@ -247,25 +248,122 @@
     }
   }
 
-  function addBadge(element, group) {
-    if (settings.mode !== "dim" || element.querySelector(`.${BADGE_CLASS}`)) {
+  function addBadge(item, group) {
+    if (settings.mode !== "dim") {
+      return;
+    }
+
+    const target = item.chapterLink || item.chapterContainer;
+    if (!target || target.parentElement.querySelector(`.${BADGE_CLASS}`)) {
       return;
     }
 
     const badge = document.createElement("span");
     badge.className = BADGE_CLASS;
     badge.textContent = `Filtered: ${group}`;
-
-    const anchor = element.querySelector("a") || element.firstElementChild || element;
-    anchor.appendChild(badge);
+    target.insertAdjacentElement("afterend", badge);
   }
 
-  function applyMark(element, group) {
-    element.setAttribute(FILTERED_ATTR, group);
-    element.classList.toggle(HIDDEN_CLASS, settings.mode === "hide");
-    element.classList.toggle(DIMMED_CLASS, settings.mode === "dim");
-    element.title = `Mangago AI Upload Filter matched ${group}`;
-    addBadge(element, group);
+  function tagFilteredItem(item, group) {
+    if (item.chapterContainer) {
+      item.chapterContainer.setAttribute(FILTERED_CHAPTER_ATTR, group);
+    }
+
+    for (const element of getItemElements(item)) {
+      element.setAttribute(FILTERED_ATTR, group);
+      element.title = `AI Sloplation Filter matched ${group}`;
+    }
+
+    addBadge(item, group);
+  }
+
+  function updateChapterCountSummary(filteredCount = null) {
+    for (const badge of document.querySelectorAll(`.${COUNT_BADGE_CLASS}`)) {
+      badge.remove();
+    }
+
+    const countNode = findChapterCountNode();
+    if (!countNode || !countNode.parentElement) {
+      return;
+    }
+
+    const total = getTotalChapterCountFromNode(countNode);
+    if (!Number.isFinite(total) || total <= 0) {
+      return;
+    }
+
+    const visibleTableRows = settings.enabled && settings.mode === "hide" ? getVisibleChapterTableRowCount() : 0;
+    const taggedFilteredCount = document.querySelectorAll(`[${FILTERED_CHAPTER_ATTR}]`).length;
+    const effectiveFilteredCount = taggedFilteredCount || (Number.isFinite(filteredCount) ? filteredCount : 0);
+    const visibleCount = visibleTableRows > 0 && visibleTableRows < total
+      ? visibleTableRows
+      : Math.max(0, total - Math.min(total, effectiveFilteredCount));
+    const badge = document.createElement("span");
+    badge.className = COUNT_BADGE_CLASS;
+    badge.textContent = ` (${visibleCount} unfiltered)`;
+    badge.title = `${visibleCount} of ${total} chapter entries are not filtered by AI Sloplation Filter.`;
+    countNode.parentElement.insertBefore(badge, countNode.nextSibling);
+  }
+
+  function rememberOriginalOrder(items) {
+    for (const item of items) {
+      const row = item.chapterContainer;
+      if (row && !row.hasAttribute(ORIGINAL_ORDER_ATTR)) {
+        row.setAttribute(ORIGINAL_ORDER_ATTR, String(originalOrderCounter));
+        originalOrderCounter += 1;
+      }
+    }
+  }
+
+  function getOriginalOrder(item) {
+    return Number.parseInt(item.chapterContainer.getAttribute(ORIGINAL_ORDER_ATTR) || "0", 10) || 0;
+  }
+
+  function sortChapterItems(items) {
+    if (!(settings.mode === "dim" && settings.sortCleanFirst) || items.length < 2) {
+      return;
+    }
+
+    rememberOriginalOrder(items);
+
+    const sortable = items.filter((item) => {
+      return item.chapterContainer && item.chapterContainer.parentElement;
+    });
+    const parents = Array.from(new Set(sortable.map((item) => item.chapterContainer.parentElement)));
+
+    for (const parent of parents) {
+      const siblings = sortable.filter((item) => item.chapterContainer.parentElement === parent);
+      if (siblings.length < 2) {
+        continue;
+      }
+
+      const sorted = siblings.slice().sort((a, b) => {
+        const aFiltered = getItemElements(a).some((element) => element.hasAttribute(FILTERED_ATTR));
+        const bFiltered = getItemElements(b).some((element) => element.hasAttribute(FILTERED_ATTR));
+
+        if (aFiltered !== bFiltered) {
+          return aFiltered ? 1 : -1;
+        }
+
+        return getOriginalOrder(a) - getOriginalOrder(b);
+      });
+
+      for (const item of sorted) {
+        parent.appendChild(item.chapterContainer);
+      }
+    }
+  }
+
+  function updateCount(count) {
+    lastFilteredCount = count;
+    try {
+      const pending = extensionApi.runtime.sendMessage({ type: "mgaif-count", count });
+      if (pending && typeof pending.catch === "function") {
+        pending.catch(() => {});
+      }
+    } catch (_error) {
+      // Popup may not be open.
+    }
   }
 
   function filterPage() {
@@ -273,71 +371,47 @@
       observer.disconnect();
     }
 
+    updatePageMode();
+    markChapterTableWrapper();
+    clearFilteredState();
+
+    const items = buildChapterItems();
+    rememberOriginalOrder(items);
+
     if (!settings.enabled) {
-      clearMarks();
-      updateChapterCountSummary();
       updateCount(0);
+      sortChapterItems(items);
+      updateChapterCountSummary(0);
       restartObserver();
       return;
     }
 
-    clearMarks();
+    const matches = items
+      .map((item) => ({ item, group: findBlockedGroup(getItemUploaderText(item)) }))
+      .filter((match) => Boolean(match.group));
 
-    let hiddenCount = 0;
-    for (const element of getCandidateElements()) {
-      const group = findBlockedGroup(getText(element));
-      if (group) {
-        applyMark(element, group);
-        hiddenCount += 1;
-      }
+    for (const { item, group } of matches) {
+      tagFilteredItem(item, group);
     }
 
-    updateCount(hiddenCount);
-    updateChapterCountSummary();
+    sortChapterItems(items);
+    updateCount(matches.length);
+    updateChapterCountSummary(matches.length);
+    window.setTimeout(() => updateChapterCountSummary(matches.length), 50);
+    window.setTimeout(() => updateChapterCountSummary(matches.length), 250);
     restartObserver();
   }
 
-  function updateCount(count) {
-    lastHiddenCount = count;
-    try {
-      chrome.runtime.sendMessage({ type: "mgaif-count", count }, () => {
-        void chrome.runtime.lastError;
-      });
-    } catch (_error) {
-      // Popup may not be open.
-    }
-
-    if (!settings.showToast || count === 0) {
-      removeToast();
-      return;
-    }
-
-    showToast(`${count} Mangago item${count === 1 ? "" : "s"} filtered.`);
-  }
-
-  function showToast(message) {
-    let toast = document.querySelector(".mgaif-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.className = "mgaif-toast";
-      document.documentElement.appendChild(toast);
-    }
-
-    toast.textContent = message;
-    clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(removeToast, 2800);
-  }
-
-  function removeToast() {
-    const toast = document.querySelector(".mgaif-toast");
-    if (toast) {
-      toast.remove();
-    }
-  }
-
-  function scheduleFilter() {
+  function scheduleFilter(delay = 120) {
     window.clearTimeout(scheduleFilter.timer);
-    scheduleFilter.timer = window.setTimeout(filterPage, 120);
+    scheduleFilter.timer = window.setTimeout(filterPage, delay);
+  }
+
+  function scheduleStartupPasses() {
+    scheduleFilter(200);
+    window.setTimeout(scheduleFilter, 900);
+    window.setTimeout(scheduleFilter, 2200);
+    window.setTimeout(scheduleFilter, 4200);
   }
 
   function startObserver() {
@@ -357,30 +431,31 @@
 
     observer.observe(document.documentElement, {
       childList: true,
+      characterData: true,
       subtree: true
     });
   }
 
   async function loadSettings() {
-    const stored = await chrome.storage.local.get(STORAGE_KEY);
+    const stored = await extensionApi.storage.local.get(STORAGE_KEY);
     settings = mergeSettings(stored[STORAGE_KEY]);
   }
 
-  chrome.storage.onChanged.addListener((changes, area) => {
+  extensionApi.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes[STORAGE_KEY]) {
       return;
     }
 
     settings = mergeSettings(changes[STORAGE_KEY].newValue);
-    scheduleFilter();
+    filterPage();
   });
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  extensionApi.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!message || message.type !== "mgaif-get-count") {
       return false;
     }
 
-    sendResponse({ count: lastHiddenCount });
+    sendResponse({ count: lastFilteredCount });
     return true;
   });
 
@@ -388,11 +463,12 @@
     .then(() => {
       filterPage();
       startObserver();
+      scheduleStartupPasses();
     })
     .catch(() => {
       settings = { ...DEFAULT_SETTINGS };
       filterPage();
       startObserver();
+      scheduleStartupPasses();
     });
 })();
-
